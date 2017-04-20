@@ -1,4 +1,10 @@
-
+/**
+ * Server Spreadsheet
+ * Author: MemeTeam
+ * Date: 4/20/2017
+ * Asynchronous
+ * "Meme Up"
+ */
 
 #include <cstdlib>
 #include <deque>
@@ -21,44 +27,47 @@ typedef std::deque<std::string> command_queue;
 
 //----------------------------------------------------------------------
 
-class chat_participant
+class ss_user
 {
 public:
-  virtual ~chat_participant() {}
-  virtual void store(std::string msg) = 0;
+  virtual ~ss_user(){}
+  virtual void send(std::string data) = 0;
+
+  
+  int userid;
+  std::string username;
 };
 
-typedef std::shared_ptr<chat_participant> chat_participant_ptr;
+typedef std::shared_ptr<ss_user> client_ptr;
 
 //----------------------------------------------------------------------
 
 class chat_room
+
 {
 public:
-  void join(chat_participant_ptr participant)
+  void join(client_ptr c, std::string name)
   {
-    participants_.insert(participant);
-    for (auto msg: recent_msgs_)
-      participant->store(msg);
+    clients.insert(c);
+    c->username = name;
   }
 
-  void leave(chat_participant_ptr participant)
+  void leave(client_ptr c)
   {
-    participants_.erase(participant);
+    clients.erase(c);
   }
 
-  void deliver(std::string msg)
+  void send(int id, std::string data)
   {
-    recent_msgs_.push_back(msg);
-    while (recent_msgs_.size() > max_recent_msgs)
-      recent_msgs_.pop_front();
-
-    for (auto participant: participants_)
-      participant->store(msg);
+    for(auto client: clients){
+      if(client->userid == id){
+	client->send(data);
+      }
+    }
   }
 
 private:
-  std::set<chat_participant_ptr> participants_;
+  std::set<client_ptr> clients;
   enum { max_recent_msgs = 100 };
   command_queue recent_msgs_;
 };
@@ -66,7 +75,7 @@ private:
 //----------------------------------------------------------------------
 
 class ss_session
-  : public chat_participant,
+  : public ss_user,
     public std::enable_shared_from_this<ss_session>
 {
 public:
@@ -77,16 +86,26 @@ public:
 
   void start()
   {
-    //room_.join(shared_from_this());
-    ID++;
+    int newid = ID++;
     std::stringstream ss;
-    ss << ID;
+    ss << newid;
+
     std::string id = ss.str() + "\n";
-
+    shared_from_this()->userid = newid;
+      
     boost::asio::async_write(socket_, boost::asio::buffer(id), boost::bind(&ss_session::handle_write, shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
-    do_read();
+    read_login();
+    
   }
-
+  
+  void send(std::string data){
+    
+    boost::asio::async_write(socket_, boost::asio::buffer(data), boost::bind(&ss_session::handle_write, shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+  }
+  
+  
+  
+  //Stores commands from server in commands queue
   void store(std::string msg)
   {
     //Adds command to list and prints it
@@ -97,32 +116,59 @@ public:
 private:
   void handle_write(const boost::system::error_code& e, std::size_t size){
   }
-  void handler(const boost::system::error_code& e, std::size_t size)
+  
+ 
+  
+  void read_login()
+  {  
+    auto self(shared_from_this());
+    std::cout << "attempting login..." << std::endl;
+    boost::asio::async_read_until(socket_, b,'\n', boost::bind(&ss_session::handle_login,shared_from_this(),boost::asio::placeholders::error,
+							       boost::asio::placeholders::bytes_transferred));    
+  }
+
+ void handle_login(const boost::system::error_code& e, std::size_t size)
   {
-    std::cout << "reading sheet" << std::endl;
     if (!e)
       {
 	std::istream is(&b);
 	std::getline(is, read_msg_);
-	store(read_msg_);
-	if(b.size() > 0){
-	  do_read();
-	}
+	std::cout << "Username:\n" << read_msg_ << "\nhas successfully connected." << std::endl;
+	room_.join(shared_from_this(), read_msg_);
+	read();
+	
       }
     else{
       //room_.leave(shared_from_this());
     }
   }
-  void do_read()
+
+
+  void read()
   {  
     auto self(shared_from_this());
-    std::cout << "reading sheet" << std::endl;
-    boost::asio::async_read_until(socket_, b,'\n', boost::bind(&ss_session::handler,shared_from_this(),boost::asio::placeholders::error,
-          boost::asio::placeholders::bytes_transferred));
-    
+    std::cout << "reading..." << std::endl;
+    boost::asio::async_read_until(socket_, b,'\n', boost::bind(&ss_session::handle_read,shared_from_this(),boost::asio::placeholders::error,
+							       boost::asio::placeholders::bytes_transferred));
   }
-  
- void do_write()
+
+  void handle_read(const boost::system::error_code& e, std::size_t size)
+  {
+    if (!e)
+      {
+	std::istream is(&b);
+	std::getline(is, read_msg_);
+	store(read_msg_);
+	send("Message recieved");
+	read();
+	
+      }
+    else{
+      //room_.leave(shared_from_this());
+    }
+  }
+
+  void do_write()
   {
     auto self(shared_from_this());
     boost::asio::async_write(socket_, boost::asio::buffer(commands.front().data(), commands.front().length()),
@@ -147,6 +193,7 @@ private:
   tcp::socket socket_;
   std::string read_msg_;
   command_queue commands;
+  chat_room room_;
 };
 
 //----------------------------------------------------------------------
@@ -171,7 +218,7 @@ private:
         {
           if (!ec)
           {
-	    std::cout << "Client connected" << std::endl;
+	    //std::cout << "socket accepted" << std::endl;
             std::make_shared<ss_session>(std::move(socket_))->start();
 	  }	
 	  //recursively loop for life of server
@@ -183,6 +230,7 @@ private:
   tcp::socket socket_;
 };
 
+typedef boost::shared_ptr<ss_server> ss_server_ptr;
 //----------------------------------------------------------------------
 
 int main(int argc, char* argv[])
@@ -190,17 +238,17 @@ int main(int argc, char* argv[])
   try
   {
     //start io_service
-    boost::asio::io_service io_service;
-
-    //list of ss_servers (this application can handle multiple separate servers for simultaneously  on different ports by adding more servers to list)
-    std::list<ss_server> servers;
+    boost::asio::io_service io_service;    
     
     //setting default ip and port
     tcp::endpoint endpoint(tcp::v4(), 2112);
 
     //creating new ss_server
-    servers.emplace_back(io_service, endpoint);
+    ss_server_ptr server(new ss_server(io_service, endpoint));
     
+    
+    std::cout << "Server online, fck u Filip" << std::endl;
+
     //running server's io
     io_service.run();
   }
