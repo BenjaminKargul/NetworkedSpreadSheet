@@ -6,8 +6,6 @@
  * The server executable for cs3505 Project #2
  */
 
-//this is a comment to test commits
-
 #include <ctime>
 #include <iostream>
 #include <string>
