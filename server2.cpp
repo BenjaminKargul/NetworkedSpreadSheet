@@ -119,37 +119,85 @@ public:
   
   
   
-  //Stores commands from server in commands queue
-  int store(std::string msg)
+  //Handles commands from server in commands queue
+  int handle_command(std::string msg)
   {
     
     std::string command = msg;
-    std::string scode = "6/n";
-    if(command == scode){
-      save();
-      std::cout << "save" << std::endl;
-      return 0;
-    }
     
     std::string opcode = command.substr(0,command.find('\t'));
     int opc = stoi(opcode);
     std::string contents = command.substr(command.find('\t')+1);
-    std::cout << "opcode " << opcode << "\ncontents " << contents << std::endl;
+    std::cout << "opcode " << opc << "\ncontents " << contents << std::endl;
     switch(opc){
-    case '0':
+    case 0:
+      fileList();
+    case 1: //New
+      openNew(contents);
+      break;
+    case 2: //Open
+      open(contents);
+      break;
+    case 3: //Edit
+      //Adds command to list for undos
+      commands.push_back(contents);
+      
+      edit();
+      break;
+    case 4: //Undo
+      //undo();
+      break;
+    case 5: //Redo
+      //redo();
+      break;
+    case 6:
+      save(contents);
+      break;
+    case 7: //Rename
+      rename(contents);
       break;
     }
 
-    //Adds command to list and prints it
-    commands.push_back(msg);
-    //std::cout << msg << std::endl;
     
   }
-  void save(){
+  
+  void rename(std::string contents){
+    send("6\tIDof" + contents);
+  }
+
+  void edit(){
+    //checks for commands, facilitates edit, then calls itself is more commands are queued up
+    if(commands.size() > 0){
+      handle_edit(commands.front().data());
+      commands.pop_front();
+      
+      if(commands.size()>0){
+	edit();
+      }
+    }
+    send("4\tIDofDocumentRequested\n");
+  }
+  
+  void handle_edit(std::string command){    
+  }
+  
+  void openNew(std::string contents){ 
+    std::cout << "opening new sheet" << std::endl;
+    send("1\t" + contents);
+  }
+  
+  void open(std::string contents){   
+    send("2\t" + contents);
+  }
+  
+  void save(std::string contents){
     //shared_from_this()->opensheet
+    send("7\t"+ contents);    
   }
+  
   void fileList(){
-    
+    std::cout << "file list requested" << std::endl;
+    send("0\tfile1.sprd\tfile2.sprd\n");
   }
 
 private:
@@ -197,8 +245,8 @@ private:
       {
 	std::istream is(&b);
 	std::getline(is, read_msg_);
-	store(read_msg_);
-	send("Message recieved");
+	handle_command(read_msg_);
+	//send("Message recieved");
 	read();
 	
       }
