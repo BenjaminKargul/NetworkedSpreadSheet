@@ -2,8 +2,7 @@
  * Server Spreadsheet
  * Author: MemeTeam
  * Date: 4/20/2017
- * Asynchronous
- * "Meme Up"
+ * Asynchronous Server based on Uinta protocol
  */
 
 #include <cstdlib>
@@ -33,7 +32,7 @@ public:
   virtual ~ss_user(){}
   virtual void send(std::string data) = 0;
 
-  
+  int opensheet;
   int userid;
   std::string username;
 };
@@ -56,7 +55,22 @@ public:
   {
     clients.erase(c);
   }
-
+  //Send to members of the same open spreadsheet
+  void sendGroup(int sheetid, std::string data){
+    for(auto client: clients){
+      if(client->opensheet == sheetid){
+	client->send(data);
+      }
+    }
+    
+  }
+  //Send to all users
+  void sendAll(std::string data){
+    for(auto client: clients){
+      client->send(data);
+    }
+  }
+  //private message
   void send(int id, std::string data)
   {
     for(auto client: clients){
@@ -106,11 +120,36 @@ public:
   
   
   //Stores commands from server in commands queue
-  void store(std::string msg)
+  int store(std::string msg)
   {
+    
+    std::string command = msg;
+    std::string scode = "6/n";
+    if(command == scode){
+      save();
+      std::cout << "save" << std::endl;
+      return 0;
+    }
+    
+    std::string opcode = command.substr(0,command.find('\t'));
+    int opc = stoi(opcode);
+    std::string contents = command.substr(command.find('\t')+1);
+    std::cout << "opcode " << opcode << "\ncontents " << contents << std::endl;
+    switch(opc){
+    case '0':
+      break;
+    }
+
     //Adds command to list and prints it
     commands.push_back(msg);
-    std::cout << commands.front().data() << std::endl;
+    //std::cout << msg << std::endl;
+    
+  }
+  void save(){
+    //shared_from_this()->opensheet
+  }
+  void fileList(){
+    
   }
 
 private:
@@ -247,7 +286,7 @@ int main(int argc, char* argv[])
     ss_server_ptr server(new ss_server(io_service, endpoint));
     
     
-    std::cout << "Server online, fck u Filip" << std::endl;
+    std::cout << "Server online" << std::endl;
 
     //running server's io
     io_service.run();
