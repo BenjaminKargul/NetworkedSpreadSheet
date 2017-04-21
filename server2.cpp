@@ -183,11 +183,11 @@ public:
   
   void openNew(std::string contents){ 
     std::cout << "opening new sheet" << std::endl;
-    send("1\t" + contents);
+    send("1\t" + contents+ "\n");
   }
   
   void open(std::string contents){   
-    send("2\t" + contents);
+    send("2\t" + contents + "\n");
   }
   
   void save(std::string contents){
