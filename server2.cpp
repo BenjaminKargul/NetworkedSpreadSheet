@@ -146,10 +146,12 @@ public:
       edit();
       break;
     case 4: //Undo
-      //undo();
+      std::cout<<"Sending Valid Undo"<<std::endl;      
+      undo(contents);
       break;
     case 5: //Redo
-      //redo();
+      std::cout<<"Sending Valid Redo"<<std::endl;      
+      redo(contents);
       break;
     case 6:
       save(contents);
@@ -195,6 +197,12 @@ public:
   void save(std::string contents){
     //shared_from_this()->opensheet
     send("7\t"+ contents);    
+  }
+  void undo(std::string contents){
+    send("4\t" + contents);
+  }  
+  void redo(std::string contents){
+    send("4\t" + contents);
   }
   
   void fileList(){
