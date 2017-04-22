@@ -15,9 +15,9 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-
 using boost::asio::ip::tcp;
 static int ID = 0;
+
 
 //----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ typedef std::shared_ptr<ss_user> client_ptr;
 
 //----------------------------------------------------------------------
 
-class chat_room
+class lobby
 
 {
 public:
@@ -75,7 +75,7 @@ public:
   {
     for(auto client: clients){
       if(client->userid == id){
-	client->send(data);
+  	client->send(data);
       }
     }
   }
@@ -132,6 +132,7 @@ public:
     switch(opc){
     case 0:
       fileList();
+      break;
     case 1: //New
       openNew(contents);
       break;
@@ -162,7 +163,8 @@ public:
   }
   
   void rename(std::string contents){
-    send("6\tIDof" + contents);
+    
+    send("6\tIDof" + contents+ "\n");
   }
 
   void edit(){
@@ -181,9 +183,9 @@ public:
   void handle_edit(std::string command){    
   }
   
-  void openNew(std::string contents){ 
+  void openNew(std::string contents){
     std::cout << "opening new sheet" << std::endl;
-    send("1\t" + contents+ "\n");
+    send("1\t1\n");
   }
   
   void open(std::string contents){   
@@ -226,7 +228,7 @@ private:
 	
       }
     else{
-      //room_.leave(shared_from_this());
+     
     }
   }
 
@@ -251,7 +253,7 @@ private:
 	
       }
     else{
-      //room_.leave(shared_from_this());
+      room_.leave(shared_from_this());
     }
   }
 
@@ -280,7 +282,7 @@ private:
   tcp::socket socket_;
   std::string read_msg_;
   command_queue commands;
-  chat_room room_;
+  lobby room_;
 };
 
 //----------------------------------------------------------------------
@@ -324,6 +326,17 @@ int main(int argc, char* argv[])
 {
   try
   {
+    /*boost::filesystem::path p("/sheets");
+    for (auto i = boost::filesystem::directory_iterator(p); i != boost::filesystem::directory_iterator(); i++)
+    {
+      if (!boost::filesystem::is_directory(i->path())) //we eliminate directories
+        {
+	  std::cout << i->path().filename().string() << std::endl;
+        }
+        else
+            continue;
+	    }*/
+    
     //start io_service
     boost::asio::io_service io_service;    
     
