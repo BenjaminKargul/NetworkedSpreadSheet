@@ -22,14 +22,29 @@
 /// Spreadsheets are never allowed to contain a combination of Formulas that establish
 /// a circular dependency.  A circular dependency exists when a cell depends on itself.
 
-  
+
+Spreadsheet::Cell & Spreadsheet::Cell::operator=(const Spreadsheet::Cell &rhs)
+{
+  if (this == &rhs)
+    {      
+      return *this; 
+    } 
+
+  this->name = rhs.name;
+  this->contents = rhs.contents;
+}
+
+
+
     
 /// A helper for the GetCellsToRecalculate method. (Circular Dependencies happen here.)
 void Spreadsheet::Visit(std::string start, std::string name, std::set<std::string> visited, std::list<std::string> changed)
 {
   std::cout << "in visit" << std::endl;
   visited.insert(name);
-  BOOST_FOREACH(std::string str, Spreadsheet::GetDirectDependents(name))
+  std::vector<std::string> search = GetDirectDependents(name);
+  //std::cout << search[0] << std::endl;
+  BOOST_FOREACH(std::string str, search)
     {
       std::cout << "in foreach" << std::endl;
       if (str == start)
@@ -179,11 +194,9 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
   else if(contents[0] == '=')
     {
       //Remove the cell (if one previously existed) to allow updated cell to replace it
-      std::map<std::string, Cell>::iterator it = cellSet.find(name);
-      if (it != cellSet.end())
-	{
-	  cellSet.erase(it);
-	}
+   
+      cellSet.erase(name);
+ 
 
       //Add the new cell in its place
       cellSet[name] =  newCell;
@@ -207,7 +220,7 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
 	}
       //Replace cell with new cell
       cellSet[name] =  newCell;
-      //A single double doesn't depend on any other cells, so remove dependees
+      //A single string doesn't depend on any other cells, so remove dependees
       std::vector<std::string> blank;
       dependencies.ReplaceDependees(name, blank);
     }
@@ -229,11 +242,7 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
       std::cout << "in catch" << std::endl;
       
       //Remove the recently added cell
-      std::map<std::string, Cell>::iterator it = cellSet.find(name);
-      if (it != cellSet.end())
-	{
-	  cellSet.erase(it);
-	}
+      cellSet.erase(name);
 
       //If there was an old cell, put it back
       if (setContainedOldCell)

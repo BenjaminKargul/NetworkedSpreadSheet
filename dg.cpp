@@ -91,9 +91,9 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
   std::vector<std::string> stringList;
  
  BOOST_FOREACH (DependencyNode node,  this->dependees)
-  {
-  stringList.push_back(node.nodeName);
- }
+   {
+    stringList.push_back(node.nodeName);
+  }
  return stringList;
 }
 
