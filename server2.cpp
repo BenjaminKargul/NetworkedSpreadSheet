@@ -166,7 +166,7 @@ public:
   
   void rename(std::string contents){
     
-    send("6\tIDof" + contents+ "\n");
+    send("6\t" + contents+ "\n");
   }
 
   void edit(){
@@ -191,7 +191,7 @@ public:
   }
   
   void open(std::string contents){   
-    send("2\t" + contents + "\n");
+    send("2\t282828\n");
   }
   
   void save(std::string contents){
