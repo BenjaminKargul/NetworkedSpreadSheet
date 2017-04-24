@@ -1,5 +1,5 @@
-#include "ss.cpp"
-#include "dg.cpp"
+#include "ss.h"
+#include "dg.h"
 #include <iostream>
 
 int main()
