@@ -62,6 +62,7 @@ class lobby
 
 {
 public:
+  lobby(){}
   void join(client_ptr c, std::string name)
   {
     clients.insert(c);
@@ -83,7 +84,9 @@ public:
   }
   //Send to all users
   void sendAll(std::string data){
+    std::cout << "sending to all" << std::endl;
     for(auto client: clients){
+      std::cout << client->username <<std::endl;
       client->send(data);
     }
   }
@@ -102,7 +105,7 @@ private:
   enum { max_recent_msgs = 100 };
   command_queue recent_msgs_;
 };
-
+static lobby room_;
 //----------------------------------------------------------------------
 
 class ss_session
@@ -188,18 +191,25 @@ public:
 
     //If a document already exists with the filename
     if(sheetvalue.count(filename) > 0){
+      std::cout << "Filename already exists" << std::endl;
+
       send("9\t" + documentID + "\n");
       return;
     }
     //If the filename requested has a '/' character (cannot change directory
     if(!regex_match(filename,r)){
+      std::cout << "Innapropriate rename" << std::endl;
       send("9\t" + documentID + "\n");
       return;
     }
 
     std::string name1 ="spreadsheets/" + sheetkey[dID];
     std::string name2 ="spreadsheets/" + filename;
-    if(std::rename( name1.c_str(), name2.c_str() ) == 0){
+    // std::cout<<name1<<std::endl;
+    //std::cout<<name2<<std::endl;
+    int result = std::rename( name1.c_str(), name2.c_str() );
+    //std::cout<<result<<std::endl;
+    if(result == 0){
       
       //remove entry in sheetvalue
       sheetvalue.erase(sheetkey[dID]);
@@ -278,6 +288,8 @@ public:
     std::ofstream {filename};
     send(msg);
     
+    sheetkey[docID] = contents;
+    sheetvalue[contents] = docID;
     //open sheet
     open_sheets[docID] = new Spreadsheet();
     //add to users open list
@@ -288,8 +300,14 @@ public:
   }
   
   void open(std::string contents){ 
+    
+    int dID = sheetvalue[contents];
+    if(open_sheets.count(dID) == 0){
+      open_sheets[dID] = new Spreadsheet();
+    }
+    shared_from_this()->opensheet.insert(docID);
     std::stringstream ss;
-    ss << sheetvalue[contents];
+    ss << dID;
 
     std::string msg = "2\t" + ss.str() + "\n";
 
@@ -298,6 +316,12 @@ public:
   
   void save(std::string contents){
     //shared_from_this()->opensheet
+    int dID = stoi(contents);
+    std::string filename = "spreadsheets/" + sheetkey[dID];
+    
+    //Names of cells to loop through and save
+    std::list<std::string> x = open_sheets[dID]->GetNamesOfAllNonemptyCells();
+    
     send("7\t"+ contents + "\n");    
   }
   void undo(std::string contents){
@@ -397,10 +421,8 @@ private:
   tcp::socket socket_;
   std::string read_msg_;
   command_queue commands;
-  lobby room_;
 
 };
-
 
 //----------------------------------------------------------------------
 
