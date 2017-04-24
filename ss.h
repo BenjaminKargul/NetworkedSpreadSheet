@@ -20,6 +20,8 @@ private:
     std::string name;
     std::string contents;
 
+    Cell & operator=(const Cell &rhs);
+
      Cell()
       {
 	this->name = "";
