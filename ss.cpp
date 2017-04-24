@@ -40,21 +40,16 @@ Spreadsheet::Cell & Spreadsheet::Cell::operator=(const Spreadsheet::Cell &rhs)
 /// A helper for the GetCellsToRecalculate method. (Circular Dependencies happen here.)
 void Spreadsheet::Visit(std::string start, std::string name, std::set<std::string> visited, std::list<std::string> changed)
 {
-  std::cout << "in visit" << std::endl;
   visited.insert(name);
   std::vector<std::string> search = GetDirectDependents(name);
-  //std::cout << search[0] << std::endl;
   BOOST_FOREACH(std::string str, search)
     {
-      std::cout << "in foreach" << std::endl;
       if (str == start)
 	{
-	  std::cout << "in if" << std::endl;
 	  throw Spreadsheet::CircularException("CircEx");
 	}
       else if (!(visited.count(str)))
 	{
-	  std::cout << "in else" << std::endl;
 	  Visit(start, str, visited, changed);
 	}
     }
@@ -115,12 +110,10 @@ std::list<std::string> Spreadsheet::SetCellContentsHelper(std::string name, std:
 /// It won't work until GetDirectDependents is implemented correctly.
 std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::set<std::string> names)
 {
-  std::cout << "in gctr" << std::endl;
   std::list<std::string> changed;
   std::set<std::string> visited;
   BOOST_FOREACH(std::string n, names)
     {
-       std::cout << "in gctrfe" << std::endl;
       if (!(visited.count(n)))
 	{
 	  Visit(n, n, visited, changed);
@@ -203,8 +196,6 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
 
       //Get the old dependees from the dependency graph
       oldDependees = dependencies.GetDependees(name);
-
-      std::cout << "in formula" << std::endl;
       
 
       //Replace the dependees of the cell with the variables that the Formula uses
@@ -232,14 +223,11 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
       this->Changed = true;
 
       std::list<std::string> to_return = cellsToRecalculate;
-      
-      std::cout << "in try" << std::endl;
 
       return to_return;
     }
   catch (std::exception & e)
     {
-      std::cout << "in catch" << std::endl;
       
       //Remove the recently added cell
       cellSet.erase(name);
@@ -382,7 +370,6 @@ std::list<std::string> Spreadsheet::SetCellContents(std::string name, std::strin
 /// <param name="name">Name of the cell</param>
 std::vector<std::string> Spreadsheet::GetDirectDependents(std::string name)
 {
-  std::cout << "in gdd" << std::endl;
   //Use the dependency graph to return the dependents of a cell
   return dependencies.GetDependents(name);
 }

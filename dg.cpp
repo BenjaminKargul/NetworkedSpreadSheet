@@ -46,7 +46,6 @@
 /// <param name="nodeName">Unique string to be associated with the new node.</param>
 DependencyGraph::DependencyNode::DependencyNode()
 {
-  this->nodeName = "";
 }
 
 DependencyGraph::DependencyNode::DependencyNode(std::string name)
@@ -54,16 +53,33 @@ DependencyGraph::DependencyNode::DependencyNode(std::string name)
   this->nodeName = name;
 }
 
+DependencyGraph::DependencyNode::DependencyNode( const DependencyNode& other ) :
+     nodeName( other.nodeName ), dependents( other.dependents ), dependees( other.dependees )
+  {}
 
-  bool DependencyGraph::DependencyNode::operator==(const DependencyNode &other) const
-  {
-    if(this->nodeName == other.nodeName)
-      {
-	return true;
-      }
-    
-    return false;
-  }
+
+DependencyGraph::DependencyNode& DependencyGraph::DependencyNode::operator=(const DependencyNode &rhs)
+{
+  if (this == &rhs)
+    {
+      return *this; 
+    }  
+
+  this->nodeName = rhs.nodeName;
+  this->dependees = rhs.dependees;
+  this->dependents = rhs.dependents;
+}
+
+
+bool DependencyGraph::DependencyNode::operator==(const DependencyNode &other) const
+{
+  if(this->nodeName == other.nodeName)
+    {
+      return true;
+    }
+  
+  return false;
+}
 
 
 /// <summary>
@@ -72,13 +88,13 @@ DependencyGraph::DependencyNode::DependencyNode(std::string name)
 /// <returns></returns>
 std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 {
-  std::vector<std::string> stringList; //TODO: How does all of this get affected by null strings?
+  std::vector<std::string> stringList;
  
- BOOST_FOREACH(DependencyNode node, this->dependents)
-  {
-  stringList.push_back(node.nodeName);
- }
- //std::cout << stringList[0] << std::endl; 
+  BOOST_FOREACH(map_t::value_type &pair,  this->dependents)
+   {
+    stringList.push_back(pair.first);
+  }
+
  return stringList;
 }
 
@@ -89,12 +105,12 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
 {
   std::vector<std::string> stringList;
- 
- BOOST_FOREACH (DependencyNode node,  this->dependees)
-   {
-    stringList.push_back(node.nodeName);
-  }
- return stringList;
+  
+  BOOST_FOREACH(map_t::value_type &pair,  this->dependees)
+    {
+      stringList.push_back(pair.first);
+    }
+  return stringList;
 }
 
 
@@ -106,17 +122,15 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
 /// </summary>
 /// <param name="dependent">The node that becomes the dependent of the current node.</param>
 /// <param name="dependencySize">Reference to the DependencyGraph's size count.</param>
-void DependencyGraph::DependencyNode::addDependent(DependencyNode dependent, int &size)
+void DependencyGraph::DependencyNode::addDependent(DependencyNode &dependent, int &size)
 {
   //If the dependency doesn't exist, add it, and adjust the DependencyGraph's "size" accordingly.
-  //!(std::find(this->dependents.begin(), this->dependents.end(), dependent) != this->dependents.end())
-  bool item_present = boost::algorithm::any_of_equal(this->dependents, dependent);
-  if (!item_present)
-  {
-    this->dependents.push_back(dependent);
-    dependent.dependees.push_back(*this);
-    size++;
-  }
+  if(dependents.count(dependent.nodeName) == 0)
+    {
+      this->dependents[dependent.nodeName] = dependent;
+      dependent.dependees[this->nodeName] = *this;
+      size++;
+    }
 }
 
 /// <summary>
@@ -127,13 +141,15 @@ void DependencyGraph::DependencyNode::addDependent(DependencyNode dependent, int
 /// </summary>
 /// <param name="dependent">The node that is the dependent of the current node</param>
 /// <param name="dependencySize">Reference to the DependencyGraph's size count</param>
-void DependencyGraph::DependencyNode::removeDependent(DependencyNode dependent, int &size)
+void DependencyGraph::DependencyNode::removeDependent(DependencyNode &dependent, int &size)
 {
   //If the dependency exists, remove it, and adjust the DependencyGraph's "size" accordingly.
-  if (std::find(this->dependents.begin(), this->dependents.end(), dependent) != this->dependents.end())
+  if(dependents.find(dependent.nodeName) != dependents.end())
     {
-      this->dependents.erase(std::remove(this->dependents.begin(), this->dependents.end(), dependent), this->dependents.end());
-      dependent.dependees.erase(std::remove(dependent.dependees.begin(), dependent.dependees.end(), *this), dependent.dependees.end());
+      dependents.erase(dependent.nodeName);
+      
+      dependent.dependees.erase(nodeName);
+  
       size--;
     }
 }
@@ -144,11 +160,11 @@ void DependencyGraph::DependencyNode::removeDependent(DependencyNode dependent, 
 /// <param name="_size">Reference to the DependencyGraph's size count</param>
 void DependencyGraph::DependencyNode::removeAllDependents(int &size)
 {
-//Can't use foreach loop, so iterate through the list of dependents with a while loop instead.
-  while(dependents.size() > 0)
+  std::vector<std::string> stringList = listDependents();
+
+  BOOST_FOREACH(std::string s , stringList)
   {
-    int endDependentIndex = dependents.size() - 1;
-    removeDependent(dependents[endDependentIndex], size);
+    removeDependent(dependents[s], size);
   }
 }
 
@@ -158,13 +174,11 @@ void DependencyGraph::DependencyNode::removeAllDependents(int &size)
 /// <param name="_size"></param>
 void DependencyGraph::DependencyNode::removeAllDependees(int &size)
 {
-//Can't use foreach loop, so iterate through the list of dependees with a while loop instead.
-  while (dependees.size() > 0)
+ std::vector<std::string> stringList = listDependees();
+
+  BOOST_FOREACH(std::string s , stringList)
   {
-    int endDependeeIndex = dependees.size() - 1;
-    //Remove each of the dependees' reference to this node. Calling the removeDependent method through the dependees ensures a 
-    //bidirectional deletion of the references.
-    dependees[endDependeeIndex].removeDependent(*this, size); 
+    removeDependent(dependees[s], size);
   }
 }
   
@@ -174,21 +188,17 @@ void DependencyGraph::DependencyNode::removeAllDependees(int &size)
 /// </summary>
 /// <param name="variable"></param>
 /// <returns></returns>
-DependencyGraph::DependencyNode DependencyGraph::retrieveNode(std::string variable)
+//This code should be 100% correct
+DependencyGraph::DependencyNode* DependencyGraph::retrieveNode(std::string variable)
 {
-
-  std::map<std::string, DependencyNode>::iterator it;
-
-  it = graph.find(variable);
-  if(it == graph.end())
+  if(graph.find(variable) == graph.end())
     {
       DependencyNode new_node(variable);
       graph[variable] = new_node;
-      return new_node;
+      return &graph[variable];
     }
 
-  DependencyNode node("");
-  return node;
+  return &graph[variable];
 }
 
 /// <summary>
@@ -204,9 +214,9 @@ DependencyGraph::DependencyNode DependencyGraph::retrieveNode(std::string variab
 void DependencyGraph::AddDependency(DependencyNode s, std::string t)
 {
   //TODO: Label this overload as being slightly better, since you don't need to lookup the node for the recurring dependee node in replaceDependents
-  DependencyNode dependent = retrieveNode(t);
-
-  s.addDependent(dependent, graph_size);
+  DependencyNode* dependent = retrieveNode(t);
+  
+  s.addDependent(*dependent, graph_size);
 }
 
 /// <summary>
@@ -222,9 +232,9 @@ void DependencyGraph::AddDependency(DependencyNode s, std::string t)
 void DependencyGraph::AddDependency(std::string s, DependencyNode t)
 {
   //TODO: Label this overload as being slightly better, since you don't need to lookup the node for the recurring dependent node in replaceDependees
-  DependencyNode dependee = retrieveNode(s);
+  DependencyNode* dependee = retrieveNode(s);
 
-  dependee.addDependent(t, graph_size);
+  dependee->addDependent(t, graph_size);
 }
 
 
@@ -277,11 +287,7 @@ int DependencyGraph::get_size()
 /// </summary>
 bool DependencyGraph::HasDependents(std::string s)
 {
-
-  std::map<std::string, DependencyNode>::iterator it;
-
-  it = graph.find(s);
-  if(it != graph.end())
+  if(graph.find(s) != graph.end())
     {
       if(graph[s].dependents.size() > 0)
 	{
@@ -301,11 +307,7 @@ bool DependencyGraph::HasDependents(std::string s)
 /// </summary>
 bool DependencyGraph::HasDependees(std::string s)
 {
-
-  std::map<std::string, DependencyNode>::iterator it;
-
-  it = graph.find(s);
-  if(it != graph.end())
+  if(graph.find(s) != graph.end())
     {
       if(graph[s].dependees.size() > 0)
 	{
@@ -325,13 +327,8 @@ bool DependencyGraph::HasDependees(std::string s)
 /// </summary>
 std::vector<std::string> DependencyGraph::GetDependents(std::string s)
 {
-
-  std::map<std::string, DependencyNode>::iterator it;
-
-  it = graph.find(s);
-  if(it != graph.end())
+  if(graph.find(s) != graph.end())
     {
-      //std::cout << graph[s].listDependents()[0] << std::endl;
       return graph[s].listDependents();
     }
   
@@ -345,10 +342,7 @@ std::vector<std::string> DependencyGraph::GetDependents(std::string s)
 std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 {
 
-  std::map<std::string, DependencyNode>::iterator it;
-
-  it = graph.find(s);
-  if(it != graph.end())
+  if(graph.find(s) != graph.end())
     {
       return graph[s].listDependees();
     }
@@ -370,10 +364,11 @@ std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 /// <param name="t"> t cannot be evaluated until s is</param>        /// 
 void DependencyGraph::AddDependency(std::string s, std::string t)
 {
-  DependencyNode dependee = retrieveNode(s);
-  DependencyNode dependent = retrieveNode(t);
-
-  dependee.addDependent(dependent, graph_size);
+  DependencyNode* dependee = retrieveNode(s);
+  DependencyNode* dependent = retrieveNode(t);
+  
+  
+  dependee->addDependent(*dependent, graph_size);
 }
 
 
@@ -385,10 +380,10 @@ void DependencyGraph::AddDependency(std::string s, std::string t)
 /// <param name="t"></param>
 void DependencyGraph::RemoveDependency(std::string s, std::string t)
 {
-  DependencyNode dependee = retrieveNode(s);
-  DependencyNode dependent = retrieveNode(t);
+  DependencyNode* dependee = retrieveNode(s);
+  DependencyNode* dependent = retrieveNode(t);
 
-  dependee.removeDependent(dependent, graph_size);
+  dependee->removeDependent(*dependent, graph_size);
 }
 
 
@@ -398,15 +393,16 @@ void DependencyGraph::RemoveDependency(std::string s, std::string t)
 /// </summary>
 void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> newDependents)
 {
-  DependencyNode dependee = retrieveNode(s);
+  DependencyNode* dependee = retrieveNode(s);
 
-  dependee.removeAllDependents(graph_size);
+  dependee->removeAllDependents(graph_size);
 
   BOOST_FOREACH(std::string dependent, newDependents)
     {
+      std::cout << "in rd foreach" << std::endl;
       //Calls the overloaded method of AddDependency that takes a reference to the dependee node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
-      AddDependency(dependee, dependent);
+      AddDependency(s, dependent);
     }
 }
 
@@ -418,16 +414,15 @@ void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> 
 void DependencyGraph::ReplaceDependees(std::string s, std::vector<std::string> newDependees)
 {
   
-  DependencyNode dependent = retrieveNode(s);
+  DependencyNode* dependent = retrieveNode(s);
 
-  dependent.removeAllDependees(graph_size);
+  dependent->removeAllDependees(graph_size);
 
   BOOST_FOREACH(std::string dependee, newDependees)
     {
-      std::cout << "in rd" << std::endl;
      //Calls the overloaded method of AddDependency that takes a reference to the dependent node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
-      AddDependency(dependee, dependent);
+      AddDependency(s, *dependent);
     }
 }
 

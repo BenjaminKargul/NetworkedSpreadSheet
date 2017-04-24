@@ -7,20 +7,27 @@
 #include <map>
 
 
+
 class DependencyGraph
 {
  private:
   
    class DependencyNode
    {
+     typedef std::map<std::string, DependencyNode > map_t;
+
    public:
      
      std::string nodeName;
-     std::vector<DependencyNode> dependents;
-     std::vector<DependencyNode> dependees;
+     map_t dependents;
+     map_t dependees;
 
      DependencyNode();
      DependencyNode(std::string name);
+
+     DependencyNode( const DependencyNode& other );
+
+     DependencyNode& operator=(const DependencyNode &rhs);
 
      bool operator==(const DependencyNode &other) const;
 
@@ -28,9 +35,9 @@ class DependencyGraph
 
      std::vector<std::string> listDependees();
 
-     void addDependent(DependencyNode dependent, int &size);
+     void addDependent(DependencyNode &dependent, int &size);
 
-     void removeDependent(DependencyNode dependent, int &size);
+     void removeDependent(DependencyNode &dependent, int &size);
 
      void removeAllDependents(int &size);
 
@@ -41,7 +48,7 @@ class DependencyGraph
 
    int graph_size;
 
-   DependencyNode retrieveNode(std::string variable);
+   DependencyNode* retrieveNode(std::string variable);
 
    void AddDependency(DependencyNode s, std::string t);
 
