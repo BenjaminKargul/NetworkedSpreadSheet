@@ -8,17 +8,34 @@
 #include <cstdlib>
 #include <deque>
 #include <iostream>
+#include <fstream>
 #include <list>
 #include <memory>
 #include <set>
 #include <utility>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <dirent.h>
+#include <map>
+#include <boost/regex.hpp>
+#include "dg.cpp"
+#include "ss.cpp"
 
 using boost::asio::ip::tcp;
-static int ID = 0;
+//client identification number
+int ID = 0;
+
+//Map of ID's to Documents
+std::map<int,std::string> sheetkey;
+std::map<std::string,int> sheetvalue;
+
+//Value to hold the next created or read documents id
+int docID= 0;
 
 
+std::map<int,Spreadsheet*> open_sheets;
+
+boost::regex r("[a-zA-Z0-9_-]+");
 //----------------------------------------------------------------------
 
 //holds commands of all clients
@@ -32,7 +49,7 @@ public:
   virtual ~ss_user(){}
   virtual void send(std::string data) = 0;
 
-  int opensheet;
+  std::set<int> opensheet;
   int userid;
   std::string username;
 };
@@ -58,7 +75,7 @@ public:
   //Send to members of the same open spreadsheet
   void sendGroup(int sheetid, std::string data){
     for(auto client: clients){
-      if(client->opensheet == sheetid){
+      if(client->opensheet.count(sheetid) > 0){
 	client->send(data);
       }
     }
@@ -165,49 +182,139 @@ public:
   }
   
   void rename(std::string contents){
-    
-    send("6\t" + contents+ "\n");
+    std::string documentID = contents.substr(0,contents.find('\t'));
+    int dID = stoi(documentID);
+    std::string filename = contents.substr(contents.find('\t')+1);
+
+    //If a document already exists with the filename
+    if(sheetvalue.count(filename) > 0){
+      send("9\t" + documentID + "\n");
+      return;
+    }
+    //If the filename requested has a '/' character (cannot change directory
+    if(!regex_match(filename,r)){
+      send("9\t" + documentID + "\n");
+      return;
+    }
+
+    std::string name1 ="spreadsheets/" + sheetkey[dID];
+    std::string name2 ="spreadsheets/" + filename;
+    if(std::rename( name1.c_str(), name2.c_str() ) == 0){
+      
+      //remove entry in sheetvalue
+      sheetvalue.erase(sheetkey[dID]);
+      //change sheetkey entry
+      sheetkey[dID] = filename;
+      //add new entry to sheetvalue
+      sheetvalue[filename] = dID;
+
+      send("8\t" + documentID + "\n");
+      room_.sendAll("6\t" + contents + "\n");
+      
+    }
+    else{
+      send("9\t" + documentID + "\n");
+    }
   }
 
   void edit(){
     //checks for commands, facilitates edit, then calls itself is more commands are queued up
     if(commands.size() > 0){
       handle_edit(commands.front().data());
+      std::string content = commands.front().data();
+      std::string documentID = content.substr(0,content.find('\t'));
+      int dID = stoi(documentID);
+      std::stringstream ss;
+      ss << dID;
+      
+      std::string msg = "4\t" + ss.str() + "\n";
+      send(msg);
+      
+      
       commands.pop_front();
+    
+      
       
       if(commands.size()>0){
 	edit();
       }
     }
-    send("4\tIDofDocumentRequested\n");
   }
+
   
-  void handle_edit(std::string command){    
+  int handle_edit(std::string command){  
+    std::string documentID = command.substr(0,command.find('\t'));
+    int dID = stoi(documentID);
+    std::string cellinfo = command.substr(command.find('\t')+1);
+    std::string cellname = cellinfo.substr(0,cellinfo.find('\t'));
+    std::string cellcontents = cellinfo.substr(cellinfo.find('\t')+1);
+    
+    open_sheets[dID]->SetCellContents(cellname,cellcontents);
+    std::stringstream ss;
+    ss << dID;
+    
+    std::string msg = "3\t" + ss.str() +"\t"+ cellname +"\t"+ cellcontents + "\n";
+    room_.sendAll(msg);
+    
+    return 0;
   }
   
   void openNew(std::string contents){
-    std::cout << "opening new sheet" << std::endl;
-    send("1\t1\n");
+    //If a document already exists with the filename
+    if(sheetvalue.count(contents) > 0){
+      fileList();
+      return;
+    }
+    //If the filename requested has a '/' character (cannot change directory
+    if(!regex_match(contents,r)){
+      fileList();
+      return;
+    }
+    std::stringstream ss;
+    ss << docID;
+    
+    std::string msg = "1\t" + ss.str() + "\n";
+    std::string filename = "spreadsheets/" + contents;
+    std::ofstream {filename};
+    send(msg);
+    
+    //open sheet
+    open_sheets[docID] = new Spreadsheet();
+    //add to users open list
+    shared_from_this()->opensheet.insert(docID);
+    
+    
+    docID++;
   }
   
-  void open(std::string contents){   
-    send("2\t282828\n");
+  void open(std::string contents){ 
+    std::stringstream ss;
+    ss << sheetvalue[contents];
+
+    std::string msg = "2\t" + ss.str() + "\n";
+
+    send(msg);
   }
   
   void save(std::string contents){
     //shared_from_this()->opensheet
-    send("7\t"+ contents);    
+    send("7\t"+ contents + "\n");    
   }
   void undo(std::string contents){
-    send("4\t" + contents);
+    send("4\t" + contents + "\n");
   }  
   void redo(std::string contents){
-    send("4\t" + contents);
+    send("4\t" + contents + "\n");
   }
   
   void fileList(){
     std::cout << "file list requested" << std::endl;
-    send("0\tfile1.sprd\tfile2.sprd\n");
+    std::string files = "0";
+    for(int i = 0; i < sheetkey.size(); i++){
+      files += "\t" + sheetkey[i];
+    }
+    files += "\n";
+    send(files);
   }
 
 private:
@@ -291,7 +398,9 @@ private:
   std::string read_msg_;
   command_queue commands;
   lobby room_;
+
 };
+
 
 //----------------------------------------------------------------------
 
@@ -330,35 +439,60 @@ private:
 typedef boost::shared_ptr<ss_server> ss_server_ptr;
 //----------------------------------------------------------------------
 
+
+
+
 int main(int argc, char* argv[])
 {
   try
   {
-    /*boost::filesystem::path p("/sheets");
-    for (auto i = boost::filesystem::directory_iterator(p); i != boost::filesystem::directory_iterator(); i++)
-    {
-      if (!boost::filesystem::is_directory(i->path())) //we eliminate directories
-        {
-	  std::cout << i->path().filename().string() << std::endl;
-        }
-        else
-            continue;
-	    }*/
-    
+    std::cout << "######################################\n#   SPREADSHEET SERVER BY MEMETEAM   #\n######################################" << std::endl;
+
+    std::cout << "Initializing..." << std::endl;
+
+
+    std::string ssname = "";
+    DIR *dp;
+    struct dirent *dirp;
+    std::string dir = "spreadsheets/";
+    dp = opendir( dir.c_str() );
+    if (dp != NULL){
+      
+      std::cout << "Files avaliable:" << std::endl;
+      //Iterate through directory
+      while ((dirp = readdir( dp ))){
+	
+	//Read file name
+	ssname = dirp->d_name;
+	
+	//Ignore files "." and ".."
+	if( !std::strcmp( ssname.c_str(), "." ) == 0 && !std::strcmp( ssname.c_str(), "..") == 0){
+	  sheetkey[docID] = ssname;
+	  sheetvalue[ssname] = docID;
+	  docID++;
+	  std::cout << ssname << ", ";
+	}
+      }
+      std::cout << std::endl;
+      
+    }
     //start io_service
     boost::asio::io_service io_service;    
     
     //setting default ip and port
     tcp::endpoint endpoint(tcp::v4(), 2112);
 
+    
+	
     //creating new ss_server
     ss_server_ptr server(new ss_server(io_service, endpoint));
     
-    
     std::cout << "Server online" << std::endl;
+	
 
     //running server's io
     io_service.run();
+
   }
   catch (std::exception& e)
   {
