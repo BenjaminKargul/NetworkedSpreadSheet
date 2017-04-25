@@ -6,7 +6,7 @@ int main()
 {
   Spreadsheet* ss = new Spreadsheet();
   DependencyGraph* dg = new DependencyGraph();
-
+  /*
   std::cout<<"Adding (s,t) and (s,r)"<< std::endl;
   dg->AddDependency("s","t");
   dg->AddDependency("s", "r");
@@ -84,7 +84,7 @@ int main()
   std::vector<std::string> dependents;
   dependents.push_back("m");
   dependents.push_back("n");
-
+  
   dg->ReplaceDependents("k", dependents);
   std::cout<<"S dependents:"<< std::endl;
   dg->GetDependents("s");
@@ -106,7 +106,7 @@ int main()
   dg->GetDependents("q");
   std::cout<<"q dependees:"<< std::endl;
   dg->GetDependees("q");
-
+  */
   std::cout<<"add a1=a3+a2"<<std::endl;
   ss->SetCellContents("a1" , "=a3+a2");
   std::cout<<"add a2=a1"<<std::endl;
