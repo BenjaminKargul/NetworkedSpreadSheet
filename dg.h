@@ -14,7 +14,7 @@ class DependencyGraph
   
    class DependencyNode
    {
-     typedef std::map<std::string, DependencyNode > map_t;
+     typedef std::map<std::string, DependencyNode* > map_t;
 
    public:
      
@@ -23,6 +23,7 @@ class DependencyGraph
      map_t dependees;
 
      DependencyNode();
+     ~DependencyNode();
      DependencyNode(std::string name);
 
      DependencyNode( const DependencyNode& other );
@@ -35,30 +36,33 @@ class DependencyGraph
 
      std::vector<std::string> listDependees();
 
-     void addDependent(DependencyNode &dependent, int &size);
+     void addDependent(DependencyNode* dependent, int &size);
 
-     void removeDependent(DependencyNode &dependent, int &size);
+     void removeDependent(DependencyNode* dependent, int &size);
+
+     void removeDependee(DependencyNode* dependent, int &size);
 
      void removeAllDependents(int &size);
 
      void removeAllDependees(int &size);
    };
 
-   std::map<std::string, DependencyNode> graph;
+   std::map<std::string, DependencyNode*> graph;
 
    int graph_size;
 
    DependencyNode* retrieveNode(std::string variable);
 
-   void AddDependency(DependencyNode s, std::string t);
+   void AddDependency(DependencyNode* s, std::string t);
 
-   void AddDependency(std::string s, DependencyNode t);
+   void AddDependency(std::string s, DependencyNode* t);
 
    
 
  public:
 
    DependencyGraph();
+   ~DependencyGraph();
 
    int get_size();
 

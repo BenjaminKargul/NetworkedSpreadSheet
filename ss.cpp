@@ -157,6 +157,8 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
     
   bool setContainedOldCell;
     
+  std::cout<< "Inserting new cell, name = " << name << ", contents = " << contents << std::endl;
+
   std::map<std::string, Cell>::iterator it = cellSet.find(name);
   if (it != cellSet.end())
     {
@@ -173,6 +175,7 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
 
   if(contents == "")
     {
+      std::cout << "Erasing contents of Cell" << std::endl;
       //Remove the cell (if one previously existed) to allow updated cell to replace it
       std::map<std::string, Cell>::iterator it = cellSet.find(name);
       if (it != cellSet.end())

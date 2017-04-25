@@ -48,9 +48,18 @@ DependencyGraph::DependencyNode::DependencyNode()
 {
 }
 
+/// <summary>
+/// Constructs a new node associated with the input string.
+/// </summary>
+/// <param name="nodeName">Unique string to be associated with the new node.</param>
+DependencyGraph::DependencyNode::~DependencyNode()
+{
+  delete this;
+}
+
+
 DependencyGraph::DependencyNode::DependencyNode(std::string name)
 {
- std::cout<<"is it here?"<<std::endl;
   this->nodeName = name;
 }
 
@@ -60,7 +69,7 @@ DependencyGraph::DependencyNode::DependencyNode( const DependencyNode& other ) :
 
 
 DependencyGraph::DependencyNode& DependencyGraph::DependencyNode::operator=(const DependencyNode &rhs)
-{ std::cout<<"is it here1?"<<std::endl;
+{
   if (this == &rhs)
     {
       return *this; 
@@ -73,7 +82,7 @@ DependencyGraph::DependencyNode& DependencyGraph::DependencyNode::operator=(cons
 
 
 bool DependencyGraph::DependencyNode::operator==(const DependencyNode &other) const
-{ std::cout<<"is it here2?"<<std::endl;
+{
   if(this->nodeName == other.nodeName)
     {
       return true;
@@ -88,13 +97,14 @@ bool DependencyGraph::DependencyNode::operator==(const DependencyNode &other) co
 /// </summary>
 /// <returns></returns>
 std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
-{ std::cout<<"is it here3?"<<std::endl;
+{ 
   std::vector<std::string> stringList;
  
   BOOST_FOREACH(map_t::value_type &pair,  this->dependents)
    {
-    stringList.push_back(pair.first);
-  }
+     stringList.push_back(pair.first);
+     std::cout<<pair.first<< " from dependents"<<std::endl;
+   }
 
  return stringList;
 }
@@ -104,15 +114,16 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 /// </summary>
 /// <returns></returns>
 std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
-{ std::cout<<"is it here4?"<<std::endl;
+{
   std::vector<std::string> stringList;
-   std::cout<<"is it here4-1?"<<std::endl;
+ 
   BOOST_FOREACH(map_t::value_type &pair,  this->dependees)
     {
-      std::cout<<"is it here4-2?"<<std::endl;
+   
       stringList.push_back(pair.first);
+      std::cout<<pair.first<< " from dependees"<<std::endl;
     }
- std::cout<<"is it here4-3?"<<std::endl;
+
   return stringList;
 }
 
@@ -125,13 +136,13 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
 /// </summary>
 /// <param name="dependent">The node that becomes the dependent of the current node.</param>
 /// <param name="dependencySize">Reference to the DependencyGraph's size count.</param>
-void DependencyGraph::DependencyNode::addDependent(DependencyNode &dependent, int &size)
-{ std::cout<<"is it here5?"<<std::endl;
+void DependencyGraph::DependencyNode::addDependent(DependencyNode* dependent, int &size)
+{
   //If the dependency doesn't exist, add it, and adjust the DependencyGraph's "size" accordingly.
-  if(dependents.count(dependent.nodeName) == 0)
+  if(dependents.count(dependent->nodeName) == 0)
     {
-      this->dependents[dependent.nodeName] = dependent;
-      dependent.dependees[this->nodeName] = *this;
+      this->dependents[dependent->nodeName] = dependent;
+      dependent->dependees[this->nodeName] = this;
       size++;
     }
 }
@@ -144,15 +155,60 @@ void DependencyGraph::DependencyNode::addDependent(DependencyNode &dependent, in
 /// </summary>
 /// <param name="dependent">The node that is the dependent of the current node</param>
 /// <param name="dependencySize">Reference to the DependencyGraph's size count</param>
-void DependencyGraph::DependencyNode::removeDependent(DependencyNode &dependent, int &size)
-{ std::cout<<"is it here6?"<<std::endl;
+void DependencyGraph::DependencyNode::removeDependent(DependencyNode* dependent, int &size)
+{
+  std::cout << "**************Removing dependent*******************" << std::endl;
   //If the dependency exists, remove it, and adjust the DependencyGraph's "size" accordingly.
-  if(dependents.find(dependent.nodeName) != dependents.end())
+  //find the dependent, S
+  std::cout <<"finding dependent " << dependent->nodeName << " on node " << nodeName << std::endl;
+  if(dependents.find(dependent->nodeName) != dependents.end())
     {
-      dependents.erase(dependent.nodeName);
+      std::cout << "found " << dependent->nodeName << ", removing " << dependent->nodeName << "as a dependent on " << nodeName << std::endl;
+       //then remove S, its dependent
+      dependents.erase(dependent->nodeName);
       
-      dependent.dependees.erase(nodeName);
-  
+      std::cout << "Removing " << nodeName << " as a dependee on " << dependent->nodeName << std::endl;
+
+      //have s remove it as a dependee
+      dependent->dependees.erase(nodeName);
+      size--;
+    }
+}
+
+
+/// <summary>
+/// Remove a dependency where the input node is the dependent. The dependency is removed both ways.
+/// (This node no longer has a reference to the dependent, and the dependent has no reference to this node).
+/// 
+/// Adjusts the size of the DependencyGraph accordingly.
+/// </summary>
+/// <param name="dependent">The node that is the dependent of the current node</param>
+/// <param name="dependencySize">Reference to the DependencyGraph's size count</param>
+void DependencyGraph::DependencyNode::removeDependee(DependencyNode* dependee, int &size)
+{
+  std::cout << "**************Removing dependee*******************" << std::endl;
+  //check that the dependee can be found on the node's list of dependees
+  //have the dependee remove the caller/dependent from it's list of dependents
+  //have the caller remove the dependee from it's list
+
+
+  //If the dependency exists, remove it, and adjust the DependencyGraph's "size" accordingly.
+  //find the dependent, S
+  std::cout <<"finding dependee " << dependee->nodeName << " on node " << nodeName << std::endl;
+  if(dependees.find(dependee->nodeName) != dependees.end())
+    {
+      std::cout << "found " << dependee->nodeName << ", removing " << nodeName << " as a dependent on " << dependee->nodeName << std::endl;
+
+      std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
+      int erasedCount = dependee->dependents.erase(nodeName);
+
+      std::cout << "Erased " << erasedCount << " elements from the dependee's dependents list" << std::endl;
+      std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
+
+      std::cout << "Removing " << dependee->nodeName << " as a dependee on " << nodeName << std::endl;
+
+      //have s remove it as a dependee
+      dependees.erase(dependee->nodeName);
       size--;
     }
 }
@@ -171,20 +227,49 @@ void DependencyGraph::DependencyNode::removeAllDependents(int &size)
   }
 }
 
+//*******************************************************************************************************Remove Dependees
 /// <summary>
 /// Removes the dependencies between this node and all the dependees.
 /// </summary>
 /// <param name="_size"></param>
 void DependencyGraph::DependencyNode::removeAllDependees(int &size)
-{std::cout<<"is it hereTest?"<<std::endl;
- std::vector<std::string> stringList = listDependees();
-std::cout<<"is it hereTest2?"<<std::endl;
+{
+  //get the list of all dependees for this node
+  std::vector<std::string> stringList = listDependees();
+
   BOOST_FOREACH(std::string s , stringList)
   {
-std::cout<<"is it hereTest3?"<<std::endl;
-    removeDependent(dependees[s], size);
+    //reaches into the list of dependees, calls remove dependent on S
+    //this doesn't work because s doesn't have this node listed as a dependent, it's a dependee
+    //replace this with calling removing dependent on the dependee
+    //removeDependent(dependees[s], size);
+
+    //removeDependee(&dependees[s], size);
+
+    std::cout <<"finding dependee " << dependees[s]->nodeName << " on node " << nodeName << std::endl;
+    if(dependees.find(dependees[s]->nodeName) != dependees.end())
+    {
+      std::cout << "found " << dependees[s]->nodeName << ", removing " << nodeName << " as a dependent on " << dependees[s]->nodeName << std::endl;
+
+      std::cout << "There are " << dependees[s]->dependents.size() << " in dependee's dependents list"<< std::endl;
+      int erasedCount = dependees[s]->dependents.erase(nodeName);
+
+      //std::cout << "Erased " << erasedCount << " elements from the dependee's dependents list" << std::endl;
+      //std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
+
+      //std::cout << "Removing " << dependee->nodeName << " as a dependee on " << nodeName << std::endl;
+
+      //have s remove it as a dependee
+      dependees.erase(s);
+      size--;
+    }
+
+
+    //std::cout << "Finished removing " << s << " as a dependee on " << nodeName << std::endl;
+    //std::cout << "There are " << dependees[s].dependents.size() << "elements in " << s << "'s dependents list"<< std::endl;
+    //dependees[s].removeDependent(*this, size);
   }
-std::cout<<"is it hereTest4?"<<std::endl;
+  std::cout << "Removed all dependees from " << nodeName << std::endl;
 }
   
 
@@ -195,15 +280,18 @@ std::cout<<"is it hereTest4?"<<std::endl;
 /// <returns></returns>
 //This code should be 100% correct
 DependencyGraph::DependencyNode* DependencyGraph::retrieveNode(std::string variable)
-{ std::cout<<"is it here7?"<<std::endl;
+{
+  std::cout <<"Retrieving node " << variable << std::endl;
   if(graph.find(variable) == graph.end())
     {
-      DependencyNode new_node(variable);
+      std::cout << "Making a new node" << std:: endl;
+      DependencyNode* new_node = new DependencyNode(variable);
+      std::cout << "Saving node to graph" <<std::endl;
       graph[variable] = new_node;
-      return &graph[variable];
+      return graph[variable];
     }
 
-  return &graph[variable];
+  return graph[variable];
 }
 
 /// <summary>
@@ -216,12 +304,12 @@ DependencyGraph::DependencyNode* DependencyGraph::retrieveNode(std::string varia
 /// </summary>
 /// <param name="s">Dependee node</param>
 /// <param name="t">String associated with dependent node</param>
-void DependencyGraph::AddDependency(DependencyNode s, std::string t)
-{ std::cout<<"is it here8?"<<std::endl;
+void DependencyGraph::AddDependency(DependencyNode* s, std::string t)
+{ 
   //TODO: Label this overload as being slightly better, since you don't need to lookup the node for the recurring dependee node in replaceDependents
   DependencyNode* dependent = retrieveNode(t);
   
-  s.addDependent(*dependent, graph_size);
+  s->addDependent(dependent, graph_size);
 }
 
 /// <summary>
@@ -234,8 +322,8 @@ void DependencyGraph::AddDependency(DependencyNode s, std::string t)
 /// </summary>
 /// <param name="s">String associated with dependee node</param>
 /// <param name="t">Dependent node</param>
-void DependencyGraph::AddDependency(std::string s, DependencyNode t)
-{ std::cout<<"is it here9?"<<std::endl;
+void DependencyGraph::AddDependency(std::string s, DependencyNode* t)
+{ 
   //TODO: Label this overload as being slightly better, since you don't need to lookup the node for the recurring dependent node in replaceDependees
   DependencyNode* dependee = retrieveNode(s);
 
@@ -247,8 +335,18 @@ void DependencyGraph::AddDependency(std::string s, DependencyNode t)
 /// Creates an empty DependencyGraph.
 /// </summary>
 DependencyGraph::DependencyGraph()
-{ std::cout<<"is it here10?"<<std::endl;
+{ 
+  std::cout << "Making empty dependency graph" << std::endl;
   this->graph_size = 0;
+}
+
+DependencyGraph::~DependencyGraph()
+{ 
+  typedef std::map<std::string, DependencyNode*> map_t;
+  BOOST_FOREACH(map_t::value_type &pair,  this->graph)
+   {
+     delete(pair.second);
+   }
 }
 
 
@@ -291,10 +389,10 @@ int DependencyGraph::get_size()
 /// Reports whether dependents(s) is non-empty.
 /// </summary>
 bool DependencyGraph::HasDependents(std::string s)
-{ std::cout<<"is it here11?"<<std::endl;
+{
   if(graph.find(s) != graph.end())
     {
-      if(graph[s].dependents.size() > 0)
+      if(graph[s]->dependents.size() > 0)
 	{
 	  return true;
 	}
@@ -311,10 +409,10 @@ bool DependencyGraph::HasDependents(std::string s)
 /// Reports whether dependees(s) is non-empty.
 /// </summary>
 bool DependencyGraph::HasDependees(std::string s)
-{ std::cout<<"is it here12?"<<std::endl;
+{ 
   if(graph.find(s) != graph.end())
     {
-      if(graph[s].dependees.size() > 0)
+      if(graph[s]->dependees.size() > 0)
 	{
 	  return true;
 	}
@@ -331,10 +429,10 @@ bool DependencyGraph::HasDependees(std::string s)
 /// Enumerates dependents(s).
 /// </summary>
 std::vector<std::string> DependencyGraph::GetDependents(std::string s)
-{ std::cout<<"is it here13?"<<std::endl;
+{
   if(graph.find(s) != graph.end())
     {
-      return graph[s].listDependents();
+      return graph[s]->listDependents();
     }
   
   std::vector<std::string> to_return;
@@ -346,13 +444,12 @@ std::vector<std::string> DependencyGraph::GetDependents(std::string s)
 /// </summary>
 std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 {
- std::cout<<"is it here14?"<<std::endl;
+
   if(graph.find(s) != graph.end())
     {
-std::cout<<"is it here14-1?"<<std::endl;
-      return graph[s].listDependees();
+
+      return graph[s]->listDependees();
     }
-  std::cout<<"is it here14-2?"<<std::endl;
   std::vector<std::string> to_return;
   return to_return;
 }
@@ -369,12 +466,11 @@ std::cout<<"is it here14-1?"<<std::endl;
 /// <param name="s"> s must be evaluated first. T depends on S</param>
 /// <param name="t"> t cannot be evaluated until s is</param>        /// 
 void DependencyGraph::AddDependency(std::string s, std::string t)
-{ std::cout<<"is it here15?"<<std::endl;
+{ 
   DependencyNode* dependee = retrieveNode(s);
   DependencyNode* dependent = retrieveNode(t);
   
-  
-  dependee->addDependent(*dependent, graph_size);
+  dependee->addDependent(dependent, graph_size);
 }
 
 
@@ -385,11 +481,11 @@ void DependencyGraph::AddDependency(std::string s, std::string t)
 /// <param name="s"></param>
 /// <param name="t"></param>
 void DependencyGraph::RemoveDependency(std::string s, std::string t)
-{ std::cout<<"is it here16?"<<std::endl;
+{ 
   DependencyNode* dependee = retrieveNode(s);
   DependencyNode* dependent = retrieveNode(t);
 
-  dependee->removeDependent(*dependent, graph_size);
+  dependee->removeDependent(dependent, graph_size);
 }
 
 
@@ -398,7 +494,7 @@ void DependencyGraph::RemoveDependency(std::string s, std::string t)
 /// t in newDependents, adds the ordered pair (s,t).
 /// </summary>
 void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> newDependents)
-{ std::cout<<"is it here17?"<<std::endl;
+{ 
   DependencyNode* dependee = retrieveNode(s);
 
   dependee->removeAllDependents(graph_size);
@@ -408,6 +504,7 @@ void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> 
       std::cout << "in rd foreach" << std::endl;
       //Calls the overloaded method of AddDependency that takes a reference to the dependee node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
+
       AddDependency(s, dependent);
     }
 }
@@ -418,21 +515,28 @@ void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> 
 /// t in newDependees, adds the ordered pair (t,s).
 /// </summary>
 void DependencyGraph::ReplaceDependees(std::string s, std::vector<std::string> newDependees)
-{ std::cout<<"is it here18?"<<std::endl;
+{
   
   DependencyNode* dependent = retrieveNode(s);
-std::cout<<"is it hereAlphaTest?"<<std::endl;
+
   dependent->removeAllDependees(graph_size);
-std::cout<<"is it hereBetaTest?"<<std::endl;
+
+  //std::cout << "Finished removing " << "t" << " as a dependee on " << dependent->nodeName << std::endl;
+  ///std::cout << "There are " << dependent->dependees["t"].dependents.size() << "elements in " << "t" << "'s dependents list"<< std::endl;
+  
+    std::cout<< std::endl << "********************Adding new dependees******************************" << std::endl;
   BOOST_FOREACH(std::string dependee, newDependees)
     {
-std::cout<<"is it hereGammaTest?"<<std::endl;
-     //Calls the overloaded method of AddDependency that takes a reference to the dependent node.
+      std::cout << "Adding " << dependee << " as a dependee" << std::endl;
+      std::cout << "new dependency ("<< dependee << ", " << s << ")" << std::endl;
+      //Calls the overloaded method of AddDependency that takes a reference to the dependent node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
-      AddDependency(s, *dependent);
-std::cout<<"is it hereDeltaTest?"<<std::endl;
+     
+      //This is adding a dependency of (s, s), when we should be adding (dependee, s)
+      //AddDependency(s, *dependent);
+      AddDependency(dependee,s);
     }
-std::cout<<"is it hereEpsilon?"<<std::endl;
+
 }
 
 
