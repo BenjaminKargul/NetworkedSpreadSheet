@@ -35,14 +35,14 @@ int docID= 0;
 
 std::map<int,Spreadsheet*> open_sheets;
 
+//Regex's filenames for letters numbers hyphens and underscores
 boost::regex r("[a-zA-Z0-9_-]+");
-//----------------------------------------------------------------------
 
 //holds commands of all clients
 typedef std::deque<std::string> command_queue;
 
-//----------------------------------------------------------------------
 
+//Holds a socket and information about the client
 class ss_user
 {
 public:
@@ -54,25 +54,27 @@ public:
   std::string username;
 };
 
+//pointer to a ss_user
 typedef std::shared_ptr<ss_user> client_ptr;
 
-//----------------------------------------------------------------------
 
+//A lobby handles all clients connected to the server
 class lobby
-
 {
 public:
-  lobby(){}
+  
+  //login
   void join(client_ptr c, std::string name)
   {
     clients.insert(c);
     c->username = name;
   }
-
+  //logout
   void leave(client_ptr c)
   {
     clients.erase(c);
   }
+
   //Send to members of the same open spreadsheet
   void sendGroup(int sheetid, std::string data){
     for(auto client: clients){
@@ -102,12 +104,14 @@ public:
 
 private:
   std::set<client_ptr> clients;
-  enum { max_recent_msgs = 100 };
   command_queue recent_msgs_;
 };
-static lobby room_;
-//----------------------------------------------------------------------
 
+//lobby used by the server
+static lobby room_;
+
+
+//Handles a connection of a client
 class ss_session
   : public ss_user,
     public std::enable_shared_from_this<ss_session>
@@ -179,9 +183,30 @@ public:
     case 7: //Rename
       rename(contents);
       break;
+    case 8: //Edit location
+      editing(contents);
+      break;
+    case 9:
+      close(contents);
+      break;
     }
 
     
+  }
+  //Send's all users on a sheet that someone is editing
+  void editing(std::string contents){
+    std::string documentid = contents.substr(0,contents.find('\t'));
+    int dID = stoi(documentid);
+    std::string data = "A\t" + contents + "\t";
+    std::stringstream ss;
+    ss << shared_from_this()->userid;
+    data += ss.str() + "\t" + shared_from_this()->username + "\n";
+    room_.sendGroup(dID,data);
+  }
+  
+  void close(std::string contents){
+    int dID = stoi(contents);
+    shared_from_this()->opensheet.erase(dID);
   }
   
   void rename(std::string contents){
@@ -219,7 +244,7 @@ public:
       sheetvalue[filename] = dID;
 
       send("8\t" + documentID + "\n");
-      room_.sendAll("6\t" + contents + "\n");
+      room_.sendGroup(dID,"6\t" + contents + "\n");
       
     }
     else{
@@ -230,10 +255,13 @@ public:
   void edit(){
     //checks for commands, facilitates edit, then calls itself is more commands are queued up
     if(commands.size() > 0){
-      handle_edit(commands.front().data());
       std::string content = commands.front().data();
       std::string documentID = content.substr(0,content.find('\t'));
       int dID = stoi(documentID);
+
+      room_.sendGroup(dID, handle_edit(commands.front().data()));
+
+
       std::stringstream ss;
       ss << dID;
       
@@ -252,7 +280,7 @@ public:
   }
 
   
-  int handle_edit(std::string command){  
+  std::string handle_edit(std::string command){  
     std::string documentID = command.substr(0,command.find('\t'));
     int dID = stoi(documentID);
     std::string cellinfo = command.substr(command.find('\t')+1);
@@ -264,9 +292,8 @@ public:
     ss << dID;
     
     std::string msg = "3\t" + ss.str() +"\t"+ cellname +"\t"+ cellcontents + "\n";
-    room_.sendAll(msg);
     
-    return 0;
+    return msg;
   }
   
   void openNew(std::string contents){
@@ -286,12 +313,16 @@ public:
     std::string msg = "1\t" + ss.str() + "\n";
     std::string filename = "spreadsheets/" + contents;
     std::ofstream {filename};
-    send(msg);
     
     sheetkey[docID] = contents;
     sheetvalue[contents] = docID;
     //open sheet
     open_sheets[docID] = new Spreadsheet();
+
+
+
+    send(msg);
+
     //add to users open list
     shared_from_this()->opensheet.insert(docID);
     
@@ -300,18 +331,37 @@ public:
   }
   
   void open(std::string contents){ 
-    
-    int dID = sheetvalue[contents];
-    if(open_sheets.count(dID) == 0){
-      open_sheets[dID] = new Spreadsheet();
+    //make sure filename exists
+    if(sheetvalue.count(contents) == 0){
+      //seems to be new
+      openNew(contents);
+      return;
     }
-    shared_from_this()->opensheet.insert(docID);
+    //make a new sheet pointer
+    int dID = sheetvalue[contents];
+    //if sheet is not open we must read
+    if(open_sheets.count(dID) == 0){      
+      //add a pointer for the new open sheet
+      open_sheets[dID] = new Spreadsheet();
+      
+    }
     std::stringstream ss;
     ss << dID;
-
+    std::string id = ss.str();
     std::string msg = "2\t" + ss.str() + "\n";
 
     send(msg);
+    std::ifstream i("spreadsheets/" + contents);
+    for(std::string cell; std::getline(i,cell);){
+      std::cout << "line read" << std::endl;
+      std::string data = id + "\t" + cell;
+      send(handle_edit(data));
+    }
+    i.close();
+    
+    
+    shared_from_this()->opensheet.insert(dID);
+
   }
   
   void save(std::string contents){
@@ -320,9 +370,20 @@ public:
     std::string filename = "spreadsheets/" + sheetkey[dID];
     
     //Names of cells to loop through and save
-    std::list<std::string> x = open_sheets[dID]->GetNamesOfAllNonemptyCells();
+    std::list<std::string> cells = open_sheets[dID]->GetNamesOfAllNonemptyCells();
+    std::ofstream o(filename);
+    std::string filedata;
     
-    send("7\t"+ contents + "\n");    
+    for(std::string cell : cells){
+      
+      o << cell;
+      o << "\t";
+      o << open_sheets[dID]->GetCellContents(cell);
+      o << "\n";
+      
+    }
+    o.close();
+    room_.sendGroup(dID,"7\t"+ contents + "\n");    
   }
   void undo(std::string contents){
     send("4\t" + contents + "\n");
