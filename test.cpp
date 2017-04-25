@@ -109,8 +109,10 @@ int main()
   */
   std::cout<<"add a1=a3+a2"<<std::endl;
   ss->SetCellContents("a1" , "=a3+a2");
-  std::cout<<"add a2=a1"<<std::endl;
-  ss->SetCellContents("a2" , "=a1");
+  std::cout<<"add a2=4"<<std::endl;
+  ss->SetCellContents("a2" , "4");
+  std::cout<<"add a3=8"<<std::endl;
+  ss->SetCellContents("a3" , "8");
   //ss->SetCellContents("a3" , "=a1");
   //std::cout<<
   //std::cout << ss->GetCellContents("A3") << std::endl;

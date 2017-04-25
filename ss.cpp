@@ -266,7 +266,7 @@ std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string con
     }
 }
 
-  
+//get variables for a function
 std::vector<std::string> Spreadsheet::get_variables(std::string s)
 {
   std::cout << "*****************************Getting Variables**********************************" << std::endl;
