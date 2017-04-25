@@ -6,12 +6,14 @@
 #include "ss.h"
 #include "dg.h"
 #include <cstdlib>
+#include <ctype.h>
 #include <map>
 #include <vector>
 #include <set>
 #include <list>
 #include <string>
 #include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
 #include <iostream>
 
 /// An AbstractSpreadsheet object represents the state of a simple spreadsheet.  A 
@@ -156,8 +158,11 @@ std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::string name)
 /// <param name="name">Name of the cell</param>
 /// <param name="contents">Object being put into the cell (double, String, Formula)</param>
 /// <returns>Set of the cells that need to be updated.</returns>
-std::list<std::string> Spreadsheet::InsertCell(std::string name, std::string contents)
+std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::string inputContents)
 {
+
+    std::string name = boost::to_upper_copy(inputName);
+    std::string contents = boost::to_upper_copy(inputContents);
   //Construct a new cell with the contents that were passed to this method.
   Cell newCell(name, contents);
 
@@ -276,16 +281,17 @@ std::vector<std::string> Spreadsheet::get_variables(std::string s)
   bool reading = false;
   BOOST_FOREACH(char ch, s)
     {
+      char upChar = toupper(ch);
       std::cout << "Char =  " << ch << std::endl;
-      if(ch >= 'a' && ch <= 'z' && (!reading))
+      if(upChar >= 'A' && upChar <= 'Z' && (!reading))
 	{
 	  reading = true;
 	  read_string = "";
-	  read_string += ch;
+	  read_string += upChar;
 	}
-      else if(ch >= '0' && ch <= '9' && reading)
+      else if(upChar >= '0' && upChar <= '9' && reading)
 	{
-	  read_string += ch;
+	  read_string += upChar;
 	}
       else if(reading)
 	{

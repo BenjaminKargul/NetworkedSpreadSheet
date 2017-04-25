@@ -108,14 +108,16 @@ int main()
   dg->GetDependees("q");
   */
   std::cout<<"add a1=a3+a2"<<std::endl;
-  ss->SetCellContents("a1" , "=a3+a2");
+  ss->SetCellContents("a1" , "=a21");
   std::cout<<"add a2=4"<<std::endl;
-  ss->SetCellContents("a2" , "4");
+  ss->SetCellContents("a21" , "=a3");
   std::cout<<"add a3=8"<<std::endl;
-  ss->SetCellContents("a3" , "8");
+  ss->SetCellContents("a3" , "=z99");
+  //ss->SetCellContents("A3" , "20");
+  ss->SetCellContents("z99" , "=a1");
   //ss->SetCellContents("a3" , "=a1");
   //std::cout<<
-  //std::cout << ss->GetCellContents("A3") << std::endl;
+  std::cout << ss->GetCellContents("a1") << std::endl;
 
   // std::cout << ss->get_variables("=A1 + B2 ")[0] << std::endl;
 }
