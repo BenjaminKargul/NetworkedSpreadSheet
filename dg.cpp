@@ -103,7 +103,10 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
   BOOST_FOREACH(map_t::value_type &pair,  this->dependents)
    {
      stringList.push_back(pair.first);
+<<<<<<< HEAD
      std::cout<<pair.first<< " from dependents"<<std::endl;
+=======
+>>>>>>> 520cb30b2c6b005bbbdd3f39b868bb5a19da5ce1
    }
 
  return stringList;
@@ -116,10 +119,9 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
 {
   std::vector<std::string> stringList;
- 
+   
   BOOST_FOREACH(map_t::value_type &pair,  this->dependees)
     {
-   
       stringList.push_back(pair.first);
       std::cout<<pair.first<< " from dependees"<<std::endl;
     }
@@ -447,9 +449,9 @@ std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 
   if(graph.find(s) != graph.end())
     {
-
-      return graph[s]->listDependees();
+      return graph[s].listDependees();
     }
+ 
   std::vector<std::string> to_return;
   return to_return;
 }
@@ -501,7 +503,7 @@ void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> 
 
   BOOST_FOREACH(std::string dependent, newDependents)
     {
-      std::cout << "in rd foreach" << std::endl;
+      
       //Calls the overloaded method of AddDependency that takes a reference to the dependee node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
 
@@ -520,6 +522,7 @@ void DependencyGraph::ReplaceDependees(std::string s, std::vector<std::string> n
   DependencyNode* dependent = retrieveNode(s);
 
   dependent->removeAllDependees(graph_size);
+
 
   //std::cout << "Finished removing " << "t" << " as a dependee on " << dependent->nodeName << std::endl;
   ///std::cout << "There are " << dependent->dependees["t"].dependents.size() << "elements in " << "t" << "'s dependents list"<< std::endl;
