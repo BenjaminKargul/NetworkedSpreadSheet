@@ -43,16 +43,13 @@ Spreadsheet::Cell & Spreadsheet::Cell::operator=(const Spreadsheet::Cell &rhs)
 void Spreadsheet::Visit(std::string start, std::string name, std::set<std::string> visited, std::list<std::string> changed)
 {
   visited.insert(name);
-  std::cout<<"Visiting "<< name <<std::endl;
+ 
   std::vector<std::string> search = GetDirectDependents(name);
-  std::cout << "direct dependents has size of " << search.size() << std::endl;
-  std::cout<<"Got direct dependents of "<<std::endl;
   BOOST_FOREACH(std::string str, search)
     {
-      std::cout<<"checking visited strings"<<std::endl;
+
       if (str == start)
 	{
-	  std::cout<<"Is this the exception being thrown?"<<std::endl;
 	  throw Spreadsheet::CircularException("CircEx");
 	}
       else if (!(visited.count(str)))
@@ -117,7 +114,7 @@ std::list<std::string> Spreadsheet::SetCellContentsHelper(std::string name, std:
 /// It won't work until GetDirectDependents is implemented correctly.
 std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::set<std::string> names)
 {
-  std::cout<<"entered recalculating"<<std::endl;
+ 
   std::list<std::string> changed;
   std::set<std::string> visited;
   BOOST_FOREACH(std::string n, names)
@@ -125,7 +122,6 @@ std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::set<std::string> 
       
       if (!(visited.count(n)))
 	{
-	  std::cout<<"Starting visits"<<std::endl;
 	  Visit(n, n, visited, changed);
 	}
     }
@@ -138,7 +134,6 @@ std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::set<std::string> 
 /// with a singleton set of names.  See the other version for details.
 std::list<std::string> Spreadsheet::GetCellsToRecalculate(std::string name)
 {
-  std::cout << "Getting cells to recalculate" << std::endl;
   std::set<std::string> to_return;
 
   to_return.insert(name);
@@ -171,8 +166,7 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
     
   bool setContainedOldCell;
     
-  std::cout<< "Inserting new cell, name = " << name << ", contents = " << contents << std::endl;
-
+ 
   std::map<std::string, Cell>::iterator it = cellSet.find(name);
   if (it != cellSet.end())
     {
@@ -189,7 +183,6 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
 
   if(contents == "")
     {
-      std::cout << "Erasing contents of Cell" << std::endl;
       //Remove the cell (if one previously existed) to allow updated cell to replace it
       std::map<std::string, Cell>::iterator it = cellSet.find(name);
       if (it != cellSet.end())
@@ -205,19 +198,15 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
     {
       //Remove the cell (if one previously existed) to allow updated cell to replace it
       
-      std::cout<<"Contents is a formula" <<std::endl;
       cellSet.erase(name);
  
 
       //Add the new cell in its place
       cellSet[name] =  newCell;
 
-      std::cout<< "Getting old dependies from graph" << std::endl;
       //Get the old dependees from the dependency graph
       oldDependees = dependencies.GetDependees(name);
       std::vector<std::string> variables = get_variables(contents);
-      std::cout << "replacing old dependees of cell" << std::endl;
-      std::cout << "There are " << variables.size() << " variables in formula " << contents << std::endl;
       //Replace the dependees of the cell with the variables that the Formula uses
 
       
@@ -240,7 +229,6 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
 
   try
     {
-      std::cout << "getting cells to recalculate" << std::endl;
       std::list<std::string> cellsToRecalculate = GetCellsToRecalculate(name);
 
       this->Changed = true;
@@ -251,7 +239,6 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
     }
   catch (std::exception & e)
     {
-      std::cout << "Exception" << std::endl;
       
       //Remove the recently added cell
       cellSet.erase(name);
@@ -264,7 +251,6 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
 
       //Replace the dependees of the cell with the old ones, if any
       dependencies.ReplaceDependees(name, oldDependees);
-      std::cout<<"How about here"<<std::endl;
       //Continue throwing the exception
       throw e;
 
@@ -274,16 +260,19 @@ std::list<std::string> Spreadsheet::InsertCell(std::string inputName, std::strin
 //get variables for a function
 std::vector<std::string> Spreadsheet::get_variables(std::string s)
 {
-  std::cout << "*****************************Getting Variables**********************************" << std::endl;
   std::vector<std::string> to_return;
 
   std::string read_string = "";
   bool reading = false;
   BOOST_FOREACH(char ch, s)
     {
+<<<<<<< HEAD
       char upChar = toupper(ch);
       std::cout << "Char =  " << ch << std::endl;
       if(upChar >= 'A' && upChar <= 'Z' && (!reading))
+=======
+      if(ch >= 'a' && ch <= 'z' && (!reading))
+>>>>>>> a507647d5d8c91b95e42a4f055223deafc7422ac
 	{
 	  reading = true;
 	  read_string = "";
@@ -295,15 +284,12 @@ std::vector<std::string> Spreadsheet::get_variables(std::string s)
 	}
       else if(reading)
 	{
-	  std::cout<<read_string<<std::endl;
 	  to_return.push_back(read_string);
 	  reading = false;
 	}
 
     }
-  std::cout<<read_string<<std::endl;
   to_return.push_back(read_string);
-  reading = false;
   return to_return;
 }
 
@@ -403,7 +389,6 @@ std::list<std::string> Spreadsheet::SetCellContents(std::string name, std::strin
 std::vector<std::string> Spreadsheet::GetDirectDependents(std::string name)
 {
   //Use the dependency graph to return the dependents of a cell
-  std::cout<<"Getting direct dependents for "<< name <<std::endl;
   return dependencies.GetDependents(name);
 }
 

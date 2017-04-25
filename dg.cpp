@@ -39,7 +39,7 @@
 /// <summary>
 /// This class represents a node on the DependencyGraph.
 /// </summary>
-            
+
 /// <summary>
 /// Constructs a new node associated with the input string.
 /// </summary>
@@ -64,8 +64,8 @@ DependencyGraph::DependencyNode::DependencyNode(std::string name)
 }
 
 DependencyGraph::DependencyNode::DependencyNode( const DependencyNode& other ) :
-     nodeName( other.nodeName ), dependents( other.dependents ), dependees( other.dependees )
-  {}
+  nodeName( other.nodeName ), dependents( other.dependents ), dependees( other.dependees )
+{}
 
 
 DependencyGraph::DependencyNode& DependencyGraph::DependencyNode::operator=(const DependencyNode &rhs)
@@ -74,7 +74,7 @@ DependencyGraph::DependencyNode& DependencyGraph::DependencyNode::operator=(cons
     {
       return *this; 
     }  
-
+  
   this->nodeName = rhs.nodeName;
   this->dependees = rhs.dependees;
   this->dependents = rhs.dependents;
@@ -99,14 +99,14 @@ bool DependencyGraph::DependencyNode::operator==(const DependencyNode &other) co
 std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 { 
   std::vector<std::string> stringList;
- 
+  
   BOOST_FOREACH(map_t::value_type &pair,  this->dependents)
-   {
-     stringList.push_back(pair.first);
-     std::cout<<pair.first<< " from dependents"<<std::endl;
-   }
-
- return stringList;
+    {
+      stringList.push_back(pair.first);
+      
+    }
+  
+  return stringList;
 }
 
 /// <summary>
@@ -116,13 +116,13 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
 std::vector<std::string> DependencyGraph::DependencyNode::listDependees()
 {
   std::vector<std::string> stringList;
-   
+  
   BOOST_FOREACH(map_t::value_type &pair,  this->dependees)
     {
       stringList.push_back(pair.first);
-      std::cout<<pair.first<< " from dependees"<<std::endl;
+      
     }
-
+  
   return stringList;
 }
 
@@ -156,18 +156,18 @@ void DependencyGraph::DependencyNode::addDependent(DependencyNode* dependent, in
 /// <param name="dependencySize">Reference to the DependencyGraph's size count</param>
 void DependencyGraph::DependencyNode::removeDependent(DependencyNode* dependent, int &size)
 {
-  std::cout << "**************Removing dependent*******************" << std::endl;
+  
   //If the dependency exists, remove it, and adjust the DependencyGraph's "size" accordingly.
   //find the dependent, S
-  std::cout <<"finding dependent " << dependent->nodeName << " on node " << nodeName << std::endl;
+  
   if(dependents.find(dependent->nodeName) != dependents.end())
     {
-      std::cout << "found " << dependent->nodeName << ", removing " << dependent->nodeName << "as a dependent on " << nodeName << std::endl;
-       //then remove S, its dependent
+      
+      //then remove S, its dependent
       dependents.erase(dependent->nodeName);
       
-      std::cout << "Removing " << nodeName << " as a dependee on " << dependent->nodeName << std::endl;
-
+      
+      
       //have s remove it as a dependee
       dependent->dependees.erase(nodeName);
       size--;
@@ -185,27 +185,21 @@ void DependencyGraph::DependencyNode::removeDependent(DependencyNode* dependent,
 /// <param name="dependencySize">Reference to the DependencyGraph's size count</param>
 void DependencyGraph::DependencyNode::removeDependee(DependencyNode* dependee, int &size)
 {
-  std::cout << "**************Removing dependee*******************" << std::endl;
+  
   //check that the dependee can be found on the node's list of dependees
   //have the dependee remove the caller/dependent from it's list of dependents
   //have the caller remove the dependee from it's list
-
-
+  
+  
   //If the dependency exists, remove it, and adjust the DependencyGraph's "size" accordingly.
   //find the dependent, S
-  std::cout <<"finding dependee " << dependee->nodeName << " on node " << nodeName << std::endl;
+  
   if(dependees.find(dependee->nodeName) != dependees.end())
     {
-      std::cout << "found " << dependee->nodeName << ", removing " << nodeName << " as a dependent on " << dependee->nodeName << std::endl;
-
-      std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
+      
       int erasedCount = dependee->dependents.erase(nodeName);
-
-      std::cout << "Erased " << erasedCount << " elements from the dependee's dependents list" << std::endl;
-      std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
-
-      std::cout << "Removing " << dependee->nodeName << " as a dependee on " << nodeName << std::endl;
-
+      
+      
       //have s remove it as a dependee
       dependees.erase(dependee->nodeName);
       size--;
@@ -219,11 +213,11 @@ void DependencyGraph::DependencyNode::removeDependee(DependencyNode* dependee, i
 void DependencyGraph::DependencyNode::removeAllDependents(int &size)
 {
   std::vector<std::string> stringList = listDependents();
-
+  
   BOOST_FOREACH(std::string s , stringList)
-  {
-    removeDependent(dependents[s], size);
-  }
+    {
+      removeDependent(dependents[s], size);
+    }
 }
 
 //*******************************************************************************************************Remove Dependees
@@ -235,42 +229,33 @@ void DependencyGraph::DependencyNode::removeAllDependees(int &size)
 {
   //get the list of all dependees for this node
   std::vector<std::string> stringList = listDependees();
-
-  BOOST_FOREACH(std::string s , stringList)
-  {
-    //reaches into the list of dependees, calls remove dependent on S
-    //this doesn't work because s doesn't have this node listed as a dependent, it's a dependee
-    //replace this with calling removing dependent on the dependee
-    //removeDependent(dependees[s], size);
-
-    //removeDependee(&dependees[s], size);
-
-    std::cout <<"finding dependee " << dependees[s]->nodeName << " on node " << nodeName << std::endl;
-    if(dependees.find(dependees[s]->nodeName) != dependees.end())
-    {
-      std::cout << "found " << dependees[s]->nodeName << ", removing " << nodeName << " as a dependent on " << dependees[s]->nodeName << std::endl;
-
-      std::cout << "There are " << dependees[s]->dependents.size() << " in dependee's dependents list"<< std::endl;
-      int erasedCount = dependees[s]->dependents.erase(nodeName);
-
-      //std::cout << "Erased " << erasedCount << " elements from the dependee's dependents list" << std::endl;
-      //std::cout << "There are " << dependee->dependents.size() << " in dependee's dependents list"<< std::endl;
-
-      //std::cout << "Removing " << dependee->nodeName << " as a dependee on " << nodeName << std::endl;
-
-      //have s remove it as a dependee
-      dependees.erase(s);
-      size--;
-    }
-
-
-    //std::cout << "Finished removing " << s << " as a dependee on " << nodeName << std::endl;
-    //std::cout << "There are " << dependees[s].dependents.size() << "elements in " << s << "'s dependents list"<< std::endl;
-    //dependees[s].removeDependent(*this, size);
-  }
-  std::cout << "Removed all dependees from " << nodeName << std::endl;
-}
   
+  BOOST_FOREACH(std::string s , stringList)
+    {
+      //reaches into the list of dependees, calls remove dependent on S
+      //this doesn't work because s doesn't have this node listed as a dependent, it's a dependee
+      //replace this with calling removing dependent on the dependee
+      //removeDependent(dependees[s], size);
+      
+      //removeDependee(&dependees[s], size);
+      
+      
+      if(dependees.find(dependees[s]->nodeName) != dependees.end())
+	{
+	  int erasedCount = dependees[s]->dependents.erase(nodeName);
+	  
+	  
+	  //have s remove it as a dependee
+	  dependees.erase(s);
+	  size--;
+	}
+      
+      
+      //dependees[s].removeDependent(*this, size);
+    }
+  
+}
+
 
 /// <summary>
 /// Retrieves a node that is associated with the string. If it doesn't exist on the graph, a new node is created and placed on the graph.
@@ -280,16 +265,13 @@ void DependencyGraph::DependencyNode::removeAllDependees(int &size)
 //This code should be 100% correct
 DependencyGraph::DependencyNode* DependencyGraph::retrieveNode(std::string variable)
 {
-  std::cout <<"Retrieving node " << variable << std::endl;
   if(graph.find(variable) == graph.end())
     {
-      std::cout << "Making a new node" << std:: endl;
       DependencyNode* new_node = new DependencyNode(variable);
-      std::cout << "Saving node to graph" <<std::endl;
       graph[variable] = new_node;
       return graph[variable];
     }
-
+  
   return graph[variable];
 }
 
@@ -325,7 +307,7 @@ void DependencyGraph::AddDependency(std::string s, DependencyNode* t)
 { 
   //TODO: Label this overload as being slightly better, since you don't need to lookup the node for the recurring dependent node in replaceDependees
   DependencyNode* dependee = retrieveNode(s);
-
+  
   dependee->addDependent(t, graph_size);
 }
 
@@ -335,7 +317,6 @@ void DependencyGraph::AddDependency(std::string s, DependencyNode* t)
 /// </summary>
 DependencyGraph::DependencyGraph()
 { 
-  std::cout << "Making empty dependency graph" << std::endl;
   this->graph_size = 0;
 }
 
@@ -343,9 +324,9 @@ DependencyGraph::~DependencyGraph()
 { 
   typedef std::map<std::string, DependencyNode*> map_t;
   BOOST_FOREACH(map_t::value_type &pair,  this->graph)
-   {
-     delete(pair.second);
-   }
+    {
+      delete(pair.second);
+    }
 }
 
 
@@ -443,12 +424,12 @@ std::vector<std::string> DependencyGraph::GetDependents(std::string s)
 /// </summary>
 std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 {
-
+  
   if(graph.find(s) != graph.end())
     {
       return graph[s]->listDependees();
     }
- 
+  
   std::vector<std::string> to_return;
   return to_return;
 }
@@ -483,7 +464,7 @@ void DependencyGraph::RemoveDependency(std::string s, std::string t)
 { 
   DependencyNode* dependee = retrieveNode(s);
   DependencyNode* dependent = retrieveNode(t);
-
+  
   dependee->removeDependent(dependent, graph_size);
 }
 
@@ -495,15 +476,15 @@ void DependencyGraph::RemoveDependency(std::string s, std::string t)
 void DependencyGraph::ReplaceDependents(std::string s, std::vector<std::string> newDependents)
 { 
   DependencyNode* dependee = retrieveNode(s);
-
+  
   dependee->removeAllDependents(graph_size);
-
+  
   BOOST_FOREACH(std::string dependent, newDependents)
     {
       
       //Calls the overloaded method of AddDependency that takes a reference to the dependee node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
-
+      
       AddDependency(s, dependent);
     }
 }
@@ -517,26 +498,20 @@ void DependencyGraph::ReplaceDependees(std::string s, std::vector<std::string> n
 {
   
   DependencyNode* dependent = retrieveNode(s);
-
-  dependent->removeAllDependees(graph_size);
-
-
-  //std::cout << "Finished removing " << "t" << " as a dependee on " << dependent->nodeName << std::endl;
-  ///std::cout << "There are " << dependent->dependees["t"].dependents.size() << "elements in " << "t" << "'s dependents list"<< std::endl;
   
-    std::cout<< std::endl << "********************Adding new dependees******************************" << std::endl;
+  dependent->removeAllDependees(graph_size);
+  
+  
   BOOST_FOREACH(std::string dependee, newDependees)
     {
-      std::cout << "Adding " << dependee << " as a dependee" << std::endl;
-      std::cout << "new dependency ("<< dependee << ", " << s << ")" << std::endl;
       //Calls the overloaded method of AddDependency that takes a reference to the dependent node.
       //This way, the same node (s) doesn't have to constantly be retrieved.
-     
+      
       //This is adding a dependency of (s, s), when we should be adding (dependee, s)
       //AddDependency(s, *dependent);
       AddDependency(dependee,s);
     }
-
+  
 }
 
 
