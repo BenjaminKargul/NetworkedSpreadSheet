@@ -103,10 +103,7 @@ std::vector<std::string> DependencyGraph::DependencyNode::listDependents()
   BOOST_FOREACH(map_t::value_type &pair,  this->dependents)
    {
      stringList.push_back(pair.first);
-<<<<<<< HEAD
      std::cout<<pair.first<< " from dependents"<<std::endl;
-=======
->>>>>>> 520cb30b2c6b005bbbdd3f39b868bb5a19da5ce1
    }
 
  return stringList;
@@ -449,7 +446,7 @@ std::vector<std::string> DependencyGraph::GetDependees(std::string s)
 
   if(graph.find(s) != graph.end())
     {
-      return graph[s].listDependees();
+      return graph[s]->listDependees();
     }
  
   std::vector<std::string> to_return;
